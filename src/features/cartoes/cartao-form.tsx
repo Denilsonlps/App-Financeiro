@@ -3,15 +3,16 @@ import { toast } from 'sonner';
 import type { Cartao, Responsavel } from '@/types';
 import { useAppState } from '@/store/store';
 import { salvarCartao, salvarPessoa } from '@/store/actions';
-import { cn, uid } from '@/lib/utils';
+import { uid } from '@/lib/utils';
 import { Field } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
+import { NumberInput } from '@/components/shared/number-input';
+import { CORES_PADRAO, SeletorCor } from './seletor-cor';
 
 const BANCOS = ['Nubank', 'BB', 'Itaú', 'Inter', 'BV', 'Riachuelo', 'C6', 'Santander', 'Bradesco', 'Caixa', 'Mercado Pago', 'PicPay', 'XP', 'Renner', 'Magalu'];
-const CORES = ['#8a05be', '#ff7a00', '#ec7000', '#fcd500', '#1d4ed8', '#111827', '#dc2626', '#059669', '#0ea5e9', '#db2777', '#64748b', '#a855f7'];
 const NOVA_PESSOA = '__nova__';
 
 export function CartaoForm({ inicial, onSalvo }: { inicial?: Cartao; onSalvo: () => void }) {
@@ -22,7 +23,7 @@ export function CartaoForm({ inicial, onSalvo }: { inicial?: Cartao; onSalvo: ()
   const [fechamento, setFechamento] = useState(inicial?.diaFechamento ?? 1);
   const [vencimento, setVencimento] = useState(inicial?.diaVencimento ?? 10);
   const [responsavel, setResponsavel] = useState<Responsavel>(inicial?.responsavelPadrao ?? 'casal');
-  const [cor, setCor] = useState(inicial?.cor ?? CORES[0]);
+  const [cor, setCor] = useState(inicial?.cor ?? CORES_PADRAO[0]);
   const [apelidos, setApelidos] = useState((inicial?.apelidos ?? []).join(', '));
 
   function salvar(e: React.FormEvent) {
@@ -50,8 +51,6 @@ export function CartaoForm({ inicial, onSalvo }: { inicial?: Cartao; onSalvo: ()
     onSalvo();
   }
 
-  const dia = (v: string) => Math.max(1, Math.min(31, +v || 1));
-
   return (
     <form onSubmit={salvar} className="grid gap-4">
       <Field label="Banco / bandeira" htmlFor="k-nome">
@@ -71,10 +70,10 @@ export function CartaoForm({ inicial, onSalvo }: { inicial?: Cartao; onSalvo: ()
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Dia de fechamento" htmlFor="k-fech" hint="Compras a partir desse dia vão para a próxima fatura.">
-          <Input id="k-fech" type="number" min={1} max={31} value={fechamento} onChange={(e) => setFechamento(dia(e.target.value))} />
+          <NumberInput id="k-fech" min={1} max={31} value={fechamento} onChange={setFechamento} />
         </Field>
         <Field label="Dia de vencimento" htmlFor="k-venc">
-          <Input id="k-venc" type="number" min={1} max={31} value={vencimento} onChange={(e) => setVencimento(dia(e.target.value))} />
+          <NumberInput id="k-venc" min={1} max={31} value={vencimento} onChange={setVencimento} />
         </Field>
       </div>
       <Field label="Responsável padrão pelo rateio" hint="Pré-selecionado ao lançar compras nesse cartão.">
@@ -89,18 +88,7 @@ export function CartaoForm({ inicial, onSalvo }: { inicial?: Cartao; onSalvo: ()
         />
       </Field>
       <Field label="Cor">
-        <div className="flex flex-wrap gap-2">
-          {CORES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCor(c)}
-              className={cn('size-7 rounded-full ring-offset-2 ring-offset-background transition', cor === c && 'ring-2 ring-foreground')}
-              style={{ backgroundColor: c }}
-              aria-label={`Cor ${c}`}
-            />
-          ))}
-        </div>
+        <SeletorCor value={cor} onChange={setCor} usadas={state.cartoes.map((c) => c.cor)} />
       </Field>
       <Field label="Apelidos (opcional)" htmlFor="k-apel" hint='Ajudam o Smart Input. Ex.: "roxinho, nu".'>
         <Input id="k-apel" value={apelidos} onChange={(e) => setApelidos(e.target.value)} />

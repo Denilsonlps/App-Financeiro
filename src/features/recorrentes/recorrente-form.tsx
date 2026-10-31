@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
 import { MoneyInput } from '@/components/shared/money-input';
+import { NumberInput } from '@/components/shared/number-input';
 import { ResponsavelPicker } from '@/components/shared/responsavel';
 import { CartaoSelect, CategoriaInput } from '@/components/shared/selects';
 
@@ -66,7 +67,7 @@ export function RecorrenteForm({ inicial, onSalvo }: { inicial?: RecorrenteRascu
           <MoneyInput id="r-valor" value={valor} onChange={setValor} />
         </Field>
         <Field label="Dia de vencimento" htmlFor="r-dia">
-          <Input id="r-dia" type="number" min={1} max={31} value={dia} onChange={(e) => setDia(Math.max(1, Math.min(31, +e.target.value || 1)))} />
+          <NumberInput id="r-dia" min={1} max={31} value={dia} onChange={setDia} />
         </Field>
       </div>
       <Field label="Forma de pagamento" htmlFor="r-forma">

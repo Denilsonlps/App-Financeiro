@@ -10,6 +10,7 @@ import { Field } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MoneyInput } from '@/components/shared/money-input';
+import { NumberInput } from '@/components/shared/number-input';
 import { ResponsavelPicker } from '@/components/shared/responsavel';
 import { CartaoSelect, CategoriaInput } from '@/components/shared/selects';
 
@@ -88,7 +89,7 @@ export function CompraForm({ inicial, onSalvo }: { inicial?: CompraRascunho; onS
           htmlFor="c-parc"
           hint={valorTotal && parcelas > 1 ? `${parcelas}x de ${moeda(valoresParcela[valoresParcela.length - 1])}` : 'À vista'}
         >
-          <Input id="c-parc" type="number" min={1} max={72} value={parcelas} onChange={(e) => setParcelas(Math.max(1, Math.min(72, +e.target.value || 1)))} />
+          <NumberInput id="c-parc" min={1} max={72} value={parcelas} onChange={setParcelas} />
         </Field>
       </div>
       <Field label="Cartão (dono)" htmlFor="c-cartao">
