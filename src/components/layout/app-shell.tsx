@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { MesSelector } from '@/components/shared/mes-context';
 import { useLancamento } from '@/features/smart-input/smart-input';
+import { IndicadorSync } from '@/features/nuvem/indicador-sync';
 
 export type Rota = 'painel' | 'cartao' | 'avulsos' | 'recorrentes' | 'cartoes' | 'config';
 
@@ -87,7 +88,10 @@ export function AppShell({ rota, children }: { rota: Rota; children: React.React
           <div className="mx-auto lg:mx-0">
             <MesSelector />
           </div>
-          <Button variant="ghost" size="icon" onClick={alternar} aria-label="Alternar tema" className="lg:ml-auto">
+          <div className="flex items-center lg:ml-auto">
+            <IndicadorSync />
+          </div>
+          <Button variant="ghost" size="icon" onClick={alternar} aria-label="Alternar tema">
             {dark ? <Sun /> : <Moon />}
           </Button>
         </header>

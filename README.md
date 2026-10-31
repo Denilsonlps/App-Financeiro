@@ -27,6 +27,8 @@ Outros comandos:
 
 O app abre com **dados de exemplo** (os cartões e pessoas da planilha). Em *Configurações* dá para começar do zero, exportar ou importar um backup em JSON.
 
+**Nuvem:** para sincronizar entre os celulares, veja [Nuvem com Supabase](#nuvem-com-supabase-dados-nos-aparelhos-dos-dois).
+
 **Ditado por voz:** usa a Web Speech API do navegador em pt-BR. Funciona no Chrome e no Edge (desktop e Android) e no Safari; precisa de internet e de permissão de microfone. Em `localhost` o microfone é liberado. Em produção o site precisa estar em HTTPS. No Firefox, digite a frase: o parser é o mesmo.
 
 ## Funcionalidades
@@ -37,7 +39,7 @@ O app abre com **dados de exemplo** (os cartões e pessoas da planilha). Em *Con
 - **Mês da fatura automático**: calculado pela data da compra e pelo fechamento do cartão. Dá para editar.
 - **Painel do Casal**: faturas totais, gastos fixos, total geral, total pago, restante, cota de cada um, **acerto do casal** (quem transfere quanto para quem), **quanto pagar a cada dono de cartão** (com “marcar fatura paga”), **parcelas a vencer** com saldo devedor e **projeção de 12 meses**.
 - **Contas recorrentes** com início e fim, pagas por PIX/boleto ou cobradas num cartão (nesse caso entram sozinhas na fatura).
-- Dark mode, layout responsivo (barra inferior com microfone no celular) e persistência em LocalStorage.
+- Dark mode, layout responsivo (barra inferior com microfone no celular) e persistência em LocalStorage ou na nuvem (Supabase), com login, convite para o casal, modo offline e atualização em tempo real.
 
 ## Arquitetura de dados
 
@@ -68,7 +70,7 @@ Lancamento (Lancamentos: uma linha por parcela)    GastoAvulso (Gastos_Fixos_e_V
 ```
 
 - Os tipos estão em [`src/types/index.ts`](src/types/index.ts).
-- O schema equivalente para **Supabase/PostgreSQL** está em [`supabase/schema.sql`](supabase/schema.sql): tabelas, FKs, a função `ratear()`, as views `v_faturas` e `v_parcelas_a_vencer` e RLS.
+- O schema do **Supabase/PostgreSQL** está em [`supabase/schema.sql`](supabase/schema.sql): as mesmas tabelas com `lar_id` em todas, chaves estrangeiras, validações (cotas somam o valor, mês válido) e RLS por lar.
 - **Acerto do casal**: quando alguém paga algo que tem cota do outro (a fatura do próprio cartão, um PIX ou uma conta), o outro fica devendo essa cota. Faturas de terceiros não geram transferência entre o casal, porque cada um paga a sua parte direto ao dono.
 
 ## Estrutura de pastas
@@ -85,7 +87,9 @@ src/
 ├── store/
 │   ├── store.ts                   # Store + persistência em LocalStorage
 │   ├── actions.ts                 # Todas as mutações (salvar compra, pagar fatura…)
-│   └── seed.ts                    # Pessoas, cartões e dados de exemplo
+│   ├── seed.ts                    # Pessoas, cartões e dados de exemplo
+│   ├── remote.ts                  # AppState ↔ tabelas do Supabase e cálculo de diferenças
+│   └── sync.ts                    # Envio, recarga, offline e tempo real
 ├── components/
 │   ├── ui/                        # Componentes no padrão shadcn/ui
 │   ├── shared/                    # Seletor de responsável, chips, seletor de mês…
@@ -97,15 +101,46 @@ src/
     ├── gastos/                    # PIX, boleto, débito
     ├── recorrentes/               # Contas mensais
     ├── cartoes/                   # Cartões e donos
-    └── configuracoes/             # Backup e restauração
-supabase/schema.sql                # Schema relacional para migrar ao Supabase
+    ├── nuvem/                     # Login, lar/convite e indicador de sincronização
+    └── configuracoes/             # Conta, backup e restauração
+supabase/schema.sql                # Schema do Supabase (rode no SQL Editor)
+supabase/test/mock-auth.sql        # Simula o auth do Supabase para testar o schema
 ```
 
-## Migrando para o Supabase
+## Nuvem com Supabase (dados nos aparelhos dos dois)
 
-1. Crie um projeto em [supabase.com](https://supabase.com) e rode `supabase/schema.sql` no SQL Editor.
-2. `npm i @supabase/supabase-js` e crie `.env` com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
-3. Toda escrita passa por `src/store/actions.ts` e toda leitura por `src/store/store.ts`. Basta trocar `carregar`/`salvar` (ou cada ação) por chamadas ao Supabase, convertendo camelCase ↔ snake_case e `YYYY-MM` ↔ `date` (dia 1). Os cálculos em `lib/finance.ts` não mudam.
+Sem configuração, o app roda no **modo local** (dados só no navegador). Com as duas variáveis do Supabase, ele passa a exigir login e sincroniza tudo entre os aparelhos, em tempo real.
+
+### 1. Criar o projeto e o banco (uma vez)
+
+1. Em [supabase.com](https://supabase.com), clique em **New project**. Região sugerida: *South America (São Paulo)*.
+2. No menu lateral, abra **SQL Editor** → **New query**, cole todo o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**. Deve aparecer *Success. No rows returned*.
+3. Em **Authentication → URL Configuration**:
+   - **Site URL**: o endereço da Vercel (ex.: `https://app-financeiro-xxxx.vercel.app`);
+   - **Redirect URLs**: adicione o mesmo endereço e `http://localhost:5173`.
+   Isso faz os links de confirmação e de "esqueci minha senha" abrirem o app.
+4. *(Opcional, recomendado para 2 pessoas)* Em **Authentication → Sign In / Providers → Email**, desligue **Confirm email**. Assim a conta funciona na hora, sem esperar o e-mail (o servidor de e-mail gratuito do Supabase envia poucos e-mails por hora).
+
+### 2. Ligar o app ao projeto
+
+Em **Project Settings → API** (ou no botão **Connect** no topo do painel), copie a **Project URL** e a chave pública (**anon public** ou **publishable**). Nunca use a `service_role`/`secret` no app.
+
+- **Na Vercel**: *Project → Settings → Environment Variables*, crie `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (marque Production, Preview e Development) e depois faça **Deployments → ⋯ → Redeploy**. Variáveis `VITE_` entram no build, então o redeploy é obrigatório.
+- **Localmente**: copie `.env.example` para `.env`, preencha e rode `npm run dev`.
+
+### 3. Primeiro acesso
+
+1. **Denilson** abre o app, clica em **Criar conta** e escolhe **Criar o lar do casal**. Se já houver lançamentos neste aparelho, a opção **Levar os dados deste aparelho** sobe tudo para a nuvem.
+2. Em **Configurações**, toque em **Enviar convite** para mandar o link e o código de 8 letras.
+3. **Hevellyn** cria a conta dela, escolhe **Já tenho um código de convite** e digita o código.
+
+### Como funciona por dentro
+
+- **Lar e segurança**: cada conta pertence a um *lar*. As políticas de RLS do Postgres só deixam ler e gravar linhas do próprio lar. Outra pessoa que crie conta no mesmo projeto não vê nada.
+- **Sincronização** (`src/store/sync.ts`): as ações continuam síncronas. A cada alteração, o app compara o estado atual com o último confirmado pelo servidor e envia só a diferença (`src/store/remote.ts`).
+- **Offline**: sem internet, tudo continua funcionando e fica guardado no aparelho. O ícone de nuvem no topo fica amarelo, e o envio acontece sozinho quando a conexão volta.
+- **Tempo real**: alterações feitas no outro celular aparecem sozinhas (Supabase Realtime), e o app também atualiza ao voltar para a aba.
+- **Testes**: `src/store/sync.pg.test.ts` roda a sincronização contra o `schema.sql` real num Postgres com RLS ativo. Ele é pulado por padrão; para rodar, aponte `PG_TEST_URL` para um banco descartável, por exemplo `PG_TEST_URL=postgres://postgres@localhost/teste npm test`.
 
 ## Smart Input: o que ele entende
 

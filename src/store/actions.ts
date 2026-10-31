@@ -49,18 +49,16 @@ export function removerCartao(id: Id): string | null {
 
 // ------------------------------------------------------------ Compras / Lançamentos
 
-/** Cria ou edita uma compra, regenerando as parcelas e preservando o status já marcado. */
+/** Cria ou edita uma compra, regenerando as parcelas e preservando id e status das existentes. */
 export function salvarCompra(compra: Compra) {
   setState((s) => {
-    const statusAnterior = new Map(
-      s.lancamentos.filter((l) => l.compraId === compra.id).map((l) => [l.parcelaAtual, l.status] as const),
-    );
+    const anteriores = new Map(s.lancamentos.filter((l) => l.compraId === compra.id).map((l) => [l.parcelaAtual, l] as const));
     return {
       ...s,
       compras: substituir(s.compras, compra),
       lancamentos: [
         ...s.lancamentos.filter((l) => l.compraId !== compra.id),
-        ...gerarLancamentos(compra, statusAnterior),
+        ...gerarLancamentos(compra, anteriores),
       ],
       categorias: s.categorias.includes(compra.categoria) ? s.categorias : [...s.categorias, compra.categoria],
     };

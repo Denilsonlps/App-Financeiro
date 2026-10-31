@@ -6,10 +6,14 @@ import { useAppState } from '@/store/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/shared/page';
+import { CardNuvem } from '@/features/nuvem/card-nuvem';
+import { useNuvem } from '@/features/nuvem/nuvem-context';
 
 export function ConfiguracoesPage() {
   const state = useAppState();
   const arquivo = useRef<HTMLInputElement>(null);
+  const nuvem = useNuvem().modo === 'nuvem';
+  const paraTodos = nuvem ? ' Isso vale para os dois aparelhos.' : '';
 
   function baixar() {
     const blob = new Blob([exportarJSON()], { type: 'application/json' });
@@ -23,13 +27,15 @@ export function ConfiguracoesPage() {
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <PageHeader title="Configurações" description="Backup, restauração e dados de exemplo." />
+      <PageHeader title="Configurações" description="Conta, backup, restauração e dados de exemplo." />
+      <CardNuvem />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Database className="size-4" /> Seus dados</CardTitle>
           <CardDescription>
-            Tudo fica salvo neste navegador (LocalStorage): {state.cartoes.length} cartões, {state.compras.length} compras, {state.gastos.length} gastos avulsos e{' '}
-            {state.recorrentes.length} contas recorrentes. Faça backups com frequência.
+            {nuvem ? 'Salvo na nuvem e neste aparelho (para uso offline): ' : 'Tudo fica salvo neste navegador (LocalStorage): '}
+            {state.cartoes.length} cartões, {state.compras.length} compras, {state.gastos.length} gastos avulsos e{' '}
+            {state.recorrentes.length} contas recorrentes.{nuvem ? '' : ' Faça backups com frequência.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -43,7 +49,7 @@ export function ConfiguracoesPage() {
             onChange={async (e) => {
               const f = e.target.files?.[0];
               if (!f) return;
-              if (!confirm('Importar vai substituir todos os dados atuais. Continuar?')) return;
+              if (!confirm('Importar vai substituir todos os dados atuais.' + paraTodos + ' Continuar?')) return;
               const erro = importarJSON(await f.text());
               erro ? toast.error(erro) : toast.success('Backup importado');
               e.target.value = '';
@@ -57,10 +63,10 @@ export function ConfiguracoesPage() {
           <CardDescription>Restaurar os dados de exemplo ou começar com o app vazio (mantém Denilson e Hevellyn).</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => confirm('Substituir tudo pelos dados de exemplo?') && (restaurar('demo'), toast.success('Dados de exemplo carregados'))}>
+          <Button variant="outline" onClick={() => confirm('Substituir tudo pelos dados de exemplo?' + paraTodos) && (restaurar('demo'), toast.success('Dados de exemplo carregados'))}>
             Carregar exemplo
           </Button>
-          <Button variant="destructive" onClick={() => confirm('Apagar TODOS os dados? Essa ação não pode ser desfeita.') && (restaurar('vazio'), toast.success('Tudo limpo'))}>
+          <Button variant="destructive" onClick={() => confirm('Apagar TODOS os dados?' + paraTodos + ' Essa ação não pode ser desfeita.') && (restaurar('vazio'), toast.success('Tudo limpo'))}>
             Começar do zero
           </Button>
         </CardContent>

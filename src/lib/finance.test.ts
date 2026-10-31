@@ -115,6 +115,14 @@ describe('resumo, acerto e projeção', () => {
     expect(p.map((x) => x.parcelas)).toEqual([3075 + 10000, 3075, 3075, 3075, 0]);
   });
 
+  it('editar a compra preserva id e status das parcelas', () => {
+    const anteriores = new Map(s.lancamentos.filter((l) => l.compraId === 'x').map((l) => [l.parcelaAtual, { ...l, status: 'pago' as const }]));
+    const novas = gerarLancamentos({ ...s.compras[0], valorTotal: 20000, parcelas: 5 }, anteriores);
+    expect(novas.slice(0, 4).map((l) => l.id)).toEqual([...anteriores.values()].map((l) => l.id));
+    expect(novas[4].status).toBe('aberto');
+    expect(novas[0].status).toBe('pago');
+  });
+
   it('lista parcelas a vencer com saldo devedor', () => {
     const [item] = parcelasAVencer(s, '2026-12');
     expect(item.parcelasRestantes).toBe(3);

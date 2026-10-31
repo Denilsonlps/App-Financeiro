@@ -9,24 +9,29 @@ import { RecorrentesPage } from '@/features/recorrentes/recorrentes-page';
 import { CartoesPage } from '@/features/cartoes/cartoes-page';
 import { ConfiguracoesPage } from '@/features/configuracoes/configuracoes-page';
 import { useTema } from '@/lib/hooks';
+import { NuvemGate } from '@/features/nuvem/nuvem-gate';
 
 export default function App() {
   const rota = useRota();
   const { dark } = useTema();
   return (
-    <MesProvider>
-      <LancamentoProvider>
-        <AppShell rota={rota}>
-          <NavSecundariaMobile rota={rota} />
-          {rota === 'painel' && <DashboardPage />}
-          {rota === 'cartao' && <LancamentosPage />}
-          {rota === 'avulsos' && <GastosPage />}
-          {rota === 'recorrentes' && <RecorrentesPage />}
-          {rota === 'cartoes' && <CartoesPage />}
-          {rota === 'config' && <ConfiguracoesPage />}
-        </AppShell>
-        <Toaster richColors position="top-center" theme={dark ? 'dark' : 'light'} />
-      </LancamentoProvider>
-    </MesProvider>
+    <>
+      <NuvemGate>
+        <MesProvider>
+          <LancamentoProvider>
+            <AppShell rota={rota}>
+              <NavSecundariaMobile rota={rota} />
+              {rota === 'painel' && <DashboardPage />}
+              {rota === 'cartao' && <LancamentosPage />}
+              {rota === 'avulsos' && <GastosPage />}
+              {rota === 'recorrentes' && <RecorrentesPage />}
+              {rota === 'cartoes' && <CartoesPage />}
+              {rota === 'config' && <ConfiguracoesPage />}
+            </AppShell>
+          </LancamentoProvider>
+        </MesProvider>
+      </NuvemGate>
+      <Toaster richColors position="top-center" theme={dark ? 'dark' : 'light'} />
+    </>
   );
 }

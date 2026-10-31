@@ -97,11 +97,14 @@ export function dataVencimento(mes: Mes, dia: number): DataISO {
   return `${mes}-${String(Math.min(dia, ultimo)).padStart(2, '0')}`;
 }
 
-/** Gera as linhas de `Lancamentos` (uma por parcela) a partir de uma compra. */
-export function gerarLancamentos(compra: Compra, statusPorParcela?: Map<number, StatusPagamento>): Lancamento[] {
+/**
+ * Gera as linhas de `Lancamentos` (uma por parcela) a partir de uma compra.
+ * `anteriores` (por número da parcela) preserva id e status ao editar a compra.
+ */
+export function gerarLancamentos(compra: Compra, anteriores?: Map<number, Pick<Lancamento, 'id' | 'status'>>): Lancamento[] {
   const valores = dividirParcelas(compra.valorTotal, compra.parcelas);
   return valores.map((valorParcela, i) => ({
-    id: uid(),
+    id: anteriores?.get(i + 1)?.id ?? uid(),
     compraId: compra.id,
     data: compra.data,
     descricao: compra.descricao,
@@ -113,7 +116,7 @@ export function gerarLancamentos(compra: Compra, statusPorParcela?: Map<number, 
     mesFatura: somarMeses(compra.mesPrimeiraFatura, i),
     responsavel: compra.responsavel,
     ...ratear(valorParcela, compra.responsavel),
-    status: statusPorParcela?.get(i + 1) ?? 'aberto',
+    status: anteriores?.get(i + 1)?.status ?? 'aberto',
   }));
 }
 
